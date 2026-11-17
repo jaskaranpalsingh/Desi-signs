@@ -48,6 +48,3 @@ next-env.d.ts
 
 # local smoke / temp logs
 backend-smoke.*
-
-# local smoke / temp logs
-backend-smoke.*
