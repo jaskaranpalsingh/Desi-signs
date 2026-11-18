@@ -32,3 +32,15 @@ export function slugifyBlogTitle(title: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
 }
+
+/** Estimate reading time from HTML or plain text (~220 wpm). */
+export function estimateReadTime(content: string): string {
+  const text = (content || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = text ? text.split(' ').length : 0;
+  const minutes = Math.max(1, Math.ceil(words / 220));
+  return `${minutes} min read`;
+}

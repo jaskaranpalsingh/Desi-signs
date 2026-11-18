@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
-    "dev:admin": "next dev --port 3001",
+    "dev": "cross-env NEXT_DIST_DIR=.next-web next dev --port 3000",
+    "dev:admin": "cross-env NEXT_DIST_DIR=.next-admin next dev --port 3001",
     "dev:backend": "tsx watch --env-file=.env.local backend/src/index.ts",
     "backend": "tsx --env-file=.env.local backend/src/index.ts",
-    "build": "next build",
-    "start": "next start --port 3000",
-    "start:admin": "next start --port 3001",
+    "build": "cross-env NEXT_DIST_DIR=.next-web next build",
+    "build:admin": "cross-env NEXT_DIST_DIR=.next-admin next build",
+    "start": "cross-env NEXT_DIST_DIR=.next-web next start --port 3000",
+    "start:admin": "cross-env NEXT_DIST_DIR=.next-admin next start --port 3001",
     "lint": "eslint"
   },
   "dependencies": {
@@ -46,6 +47,7 @@
     "@types/pdfkit": "^0.17.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",

@@ -31,7 +31,7 @@ import {
   SettingsModel,
 } from './models';
 import { sanitizeBlogHtml, looksLikeHtml } from './sanitize';
-import { normalizeBlogCategory, slugifyBlogTitle } from './blog-constants';
+import { estimateReadTime, normalizeBlogCategory, slugifyBlogTitle } from './blog-constants';
 
 // Fallback in-memory state with deep clone
 class MemoryStore {
@@ -615,7 +615,7 @@ function normalizeBlogPayload(blogData: Partial<BlogPostItem>) {
       : [],
     publishedDate:
       blogData.publishedDate || new Date().toISOString().split('T')[0],
-    readTime: (blogData.readTime || '5 min read').trim(),
+    readTime: (blogData.readTime || '').trim() || estimateReadTime(content),
     image: (blogData.image || '').trim(),
     imageAlt: (blogData.imageAlt || '').trim(),
     metaTitle: (blogData.metaTitle || '').trim(),

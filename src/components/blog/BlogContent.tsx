@@ -52,7 +52,7 @@ export function BlogContent({ content }: { content: string }) {
     const safe = sanitizeBlogHtml(content);
     return (
       <div
-        className="blog-content space-y-4 text-base leading-relaxed text-neutral-700 [&_a]:font-medium [&_a]:text-[#D40018] [&_a]:underline [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-neutral-900 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-neutral-900 [&_img]:my-6 [&_img]:max-h-[480px] [&_img]:w-full [&_img]:rounded-xs [&_img]:object-cover [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5"
+        className="blog-content space-y-5 text-[16.5px] leading-[1.75] text-[#344054] sm:text-[17px] [&_a]:font-semibold [&_a]:text-[#DC001B] [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#DC001B] [&_blockquote]:bg-[#FDECEF] [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-[#667085] [&_h2]:mt-10 [&_h2]:text-[1.55rem] [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-[#111827] [&_h3]:mt-8 [&_h3]:text-[1.25rem] [&_h3]:font-bold [&_h3]:text-[#111827] [&_img]:my-7 [&_img]:max-h-[480px] [&_img]:w-full [&_img]:object-cover [&_li]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:leading-[1.75] [&_strong]:font-semibold [&_strong]:text-[#111827] [&_ul]:list-disc [&_ul]:pl-5"
         dangerouslySetInnerHTML={{ __html: safe }}
       />
     );

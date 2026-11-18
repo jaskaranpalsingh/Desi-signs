@@ -1,11 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { getBlogs } from '@/lib/data-store';
 import { constructMetadata } from '@/lib/seo';
 import { BlogHero } from '@/components/blog/BlogHero';
 import { BlogListing } from '@/components/blog/BlogListing';
 import { BLOG_CATEGORIES } from '@/lib/blog-constants';
+import { getPublishedBlogsForSite } from '@/lib/blog-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,17 +24,19 @@ export default async function BlogPage({
   const { category: categoryParam } = await searchParams;
   const selectedCategory = Array.isArray(categoryParam) ? categoryParam[0] : categoryParam;
 
-  const blogs = await getBlogs({ publishedOnly: true });
+  const allPublished = await getPublishedBlogsForSite();
+  const visibleBlogs = selectedCategory
+    ? allPublished.filter(
+        (blog) => blog.category.toLowerCase() === selectedCategory.toLowerCase(),
+      )
+    : allPublished;
+
   const availableCategories = Array.from(
     new Set([
       ...BLOG_CATEGORIES,
-      ...blogs.map((blog) => blog.category).filter(Boolean),
+      ...allPublished.map((blog) => blog.category).filter(Boolean),
     ]),
   );
-
-  const visibleBlogs = selectedCategory
-    ? blogs.filter((blog) => blog.category.toLowerCase() === selectedCategory.toLowerCase())
-    : blogs;
 
   return (
     <div className="min-h-screen bg-white">

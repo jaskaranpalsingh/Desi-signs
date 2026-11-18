@@ -17,7 +17,11 @@ import {
   X,
 } from 'lucide-react';
 import { BlogPostItem } from '@/lib/types';
-import { BLOG_CATEGORIES, slugifyBlogTitle } from '@/lib/blog-constants';
+import {
+  BLOG_CATEGORIES,
+  estimateReadTime,
+  slugifyBlogTitle,
+} from '@/lib/blog-constants';
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
 
 type StatusFilter = 'all' | 'published' | 'draft';
@@ -50,6 +54,7 @@ export default function AdminBlogPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [slugTouched, setSlugTouched] = useState(false);
@@ -83,9 +88,16 @@ export default function AdminBlogPage() {
     return () => clearTimeout(timer);
   }, [fetchBlogs]);
 
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
   const openCreate = () => {
     setError('');
     setSuccess('');
+    setFieldError(null);
     setSlugTouched(false);
     setEditingBlog(emptyBlog());
   };
@@ -93,8 +105,35 @@ export default function AdminBlogPage() {
   const openEdit = (blog: BlogPostItem) => {
     setError('');
     setSuccess('');
+    setFieldError(null);
     setSlugTouched(true);
     setEditingBlog({ ...blog });
+  };
+
+  const validateBlogForm = (blog: Partial<BlogPostItem>): string | null => {
+    if (!(blog.title || '').trim() || (blog.title || '').trim().length < 5) {
+      setFieldError('title');
+      return 'Title must be at least 5 characters.';
+    }
+    if (!(blog.slug || '').trim()) {
+      setFieldError('slug');
+      return 'URL slug is required.';
+    }
+    if ((blog.shortDescription || '').trim().length < 10) {
+      setFieldError('shortDescription');
+      return 'Excerpt must be at least 10 characters.';
+    }
+    const plainContent = (blog.content || '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (plainContent.length < 20) {
+      setFieldError('content');
+      return 'Content must be at least 20 characters.';
+    }
+    setFieldError(null);
+    return null;
   };
 
   const handleTitleChange = (title: string) => {
@@ -140,9 +179,24 @@ export default function AdminBlogPage() {
       setError('');
       setSuccess('');
 
+      const localError = validateBlogForm(editingBlog);
+      if (localError) {
+        setError(localError);
+        return;
+      }
+
+      const content = editingBlog.content || '';
       const payload = {
         ...editingBlog,
         published,
+        content,
+        shortDescription: (editingBlog.shortDescription || '').trim(),
+        readTime: editingBlog.readTime?.trim() || estimateReadTime(content),
+        metaTitle: editingBlog.metaTitle?.trim() || editingBlog.title || '',
+        metaDescription:
+          editingBlog.metaDescription?.trim() ||
+          (editingBlog.shortDescription || '').trim() ||
+          '',
         tags: Array.isArray(editingBlog.tags)
           ? editingBlog.tags
           : String(editingBlog.tags || '')
@@ -163,14 +217,16 @@ export default function AdminBlogPage() {
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
-        const fieldErrors = data.errors
-          ? Object.values(data.errors as Record<string, string[]>)
-              .flat()
-              .join(' ')
-          : '';
-        throw new Error(data.message || fieldErrors || 'Save failed');
+        const errors = (data.errors || {}) as Record<string, string[]>;
+        const fieldErrors = Object.values(errors).flat().join(' ');
+        if (errors.shortDescription?.length) setFieldError('shortDescription');
+        else if (errors.title?.length) setFieldError('title');
+        else if (errors.slug?.length) setFieldError('slug');
+        else if (errors.content?.length) setFieldError('content');
+        throw new Error(fieldErrors || data.message || 'Save failed');
       }
 
+      setFieldError(null);
       setSuccess(
         published
           ? 'Blog published. It is now live on the public Blog page.'
@@ -479,6 +535,20 @@ export default function AdminBlogPage() {
                   />
                 </div>
                 <div>
+                  <label className="mb-1 block font-semibold">Author Role</label>
+                  <input
+                    type="text"
+                    value={editingBlog.authorRole || ''}
+                    onChange={(e) =>
+                      setEditingBlog({ ...editingBlog, authorRole: e.target.value })
+                    }
+                    className="w-full rounded-xs border border-neutral-300 px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
                   <label className="mb-1 block font-semibold">Publish Date *</label>
                   <input
                     type="date"
@@ -490,15 +560,13 @@ export default function AdminBlogPage() {
                     className="w-full rounded-xs border border-neutral-300 px-3 py-2"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block font-semibold">Read Time</label>
                   <input
                     type="text"
                     value={editingBlog.readTime || ''}
                     onChange={(e) => setEditingBlog({ ...editingBlog, readTime: e.target.value })}
+                    placeholder="Auto from content"
                     className="w-full rounded-xs border border-neutral-300 px-3 py-2"
                   />
                 </div>
@@ -572,20 +640,45 @@ export default function AdminBlogPage() {
                 <textarea
                   rows={2}
                   required
+                  minLength={10}
                   value={editingBlog.shortDescription || ''}
-                  onChange={(e) =>
-                    setEditingBlog({ ...editingBlog, shortDescription: e.target.value })
-                  }
-                  className="w-full rounded-xs border border-neutral-300 px-3 py-2"
+                  onChange={(e) => {
+                    setFieldError((prev) =>
+                      prev === 'shortDescription' ? null : prev,
+                    );
+                    setEditingBlog({ ...editingBlog, shortDescription: e.target.value });
+                  }}
+                  placeholder="At least 10 characters — shown on the blog listing cards"
+                  className={`w-full rounded-xs border px-3 py-2 ${
+                    fieldError === 'shortDescription'
+                      ? 'border-red-400 bg-red-50'
+                      : 'border-neutral-300'
+                  }`}
                 />
+                <p
+                  className={`mt-1 text-[11px] ${
+                    fieldError === 'shortDescription' ? 'text-red-600' : 'text-neutral-500'
+                  }`}
+                >
+                  {(editingBlog.shortDescription || '').trim().length}/10 characters minimum
+                </p>
               </div>
 
               <div>
                 <label className="mb-1 block font-semibold">Full Blog Content *</label>
                 <RichTextEditor
                   value={editingBlog.content || ''}
-                  onChange={(content) => setEditingBlog({ ...editingBlog, content })}
+                  onChange={(content) =>
+                    setEditingBlog({
+                      ...editingBlog,
+                      content,
+                      readTime: estimateReadTime(content),
+                    })
+                  }
                 />
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  Read time updates automatically from content length.
+                </p>
               </div>
 
               <div className="rounded-xs border border-neutral-200 bg-neutral-50 p-3">
